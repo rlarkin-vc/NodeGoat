@@ -1,5 +1,7 @@
 var ContributionsDAO = require("../data/contributions-dao").ContributionsDAO;
 
+// trivial change
+
 /* The ContributionsHandler must be constructed with a connected db */
 function ContributionsHandler(db) {
     "use strict";
