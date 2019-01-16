@@ -6,6 +6,7 @@ pipeline {
             steps {
                 echo 'Building..'
                 // bat 'gradlew build'
+                git 'https://github.com/rlarkin-vc/NodeGoat'
             }
         }
         stage('Test') {
