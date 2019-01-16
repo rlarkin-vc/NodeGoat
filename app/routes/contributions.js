@@ -1,6 +1,6 @@
 var ContributionsDAO = require("../data/contributions-dao").ContributionsDAO;
 
-// trivial change
+// trivial changes
 
 /* The ContributionsHandler must be constructed with a connected db */
 function ContributionsHandler(db) {

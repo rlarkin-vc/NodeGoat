@@ -1,6 +1,6 @@
 var UserDAO = require("./user-dao").UserDAO;
 
-// trivial change
+// trivial changes
 
 /* The AllocationsDAO must be constructed with a connected database object */
 function AllocationsDAO(db) {
