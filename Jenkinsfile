@@ -6,12 +6,14 @@ pipeline {
             steps {
                 echo 'Building..'
                 // bat 'gradlew build'
-                git 'https://github.com/rlarkin-vc/NodeGoat'
+                // git 'https://github.com/rlarkin-vc/NodeGoat'
+                bat 'npm install'
             }
         }
         stage('Test') {
             steps {
                 echo 'Testing..'
+                bat 'npm test'
             }
         }
         stage('Greenlight Example') {
