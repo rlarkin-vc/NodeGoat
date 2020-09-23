@@ -1,0 +1,124 @@
+# Javascript Node CircleCI 2.0 configuration file
+#
+# Check https://circleci.com/docs/2.0/language-javascript/ for more details
+#
+version: 2
+jobs:
+  build:
+    docker:
+      # specify the version you desire here
+      - image: circleci/node:7.10
+
+      # Specify service dependencies here if necessary
+      # CircleCI maintains a library of pre-built images
+      # documented at https://circleci.com/docs/2.0/circleci-images/
+      # - image: circleci/mongo:3.4.4
+
+    working_directory: ~/repo/nodegoat
+
+    steps:
+      - checkout
+
+      # Download and cache dependencies
+      - restore_cache:
+          keys:
+            - v1-dependencies-{{ checksum "package.json" }}
+            # fallback to using the latest cache if no exact match is found
+            - v1-dependencies-
+
+      - run: yarn install
+
+      - save_cache:
+          paths:
+            - node_modules
+          key: v1-dependencies-{{ checksum "package.json" }}
+
+      # run tests!
+      - run: yarn test
+      
+      # keep the files around for the scan job
+      - persist_to_workspace:
+          root: ..
+          paths:
+            - nodegoat
+      
+  # job to upload to Veracode for scanning
+  veracode_scan:
+
+    # use a java-based image to run the Veracode API wrapper
+    docker:
+      - image: circleci/openjdk:11.0.2-jdk
+      
+    working_directory: ~/repo
+    
+    steps:
+      # get the files from the previous job
+      - attach_workspace:
+          at: .
+          
+      # 'package' for uploading to Veracode
+      - run: 
+          name: "Package for upload to Veracode"
+          #command: zip -r upload.zip nodegoat
+          command: zip -r upload.zip nodegoat -x *node_modules/*
+      
+      # grab the Veracode agent
+      - run:
+          name: "Get the Veracode agent"
+          command: |
+            curl -sSO https://downloads.veracode.com/securityscan/pipeline-scan-LATEST.zip
+            unzip pipeline-scan-LATEST.zip
+            
+      # upload for scanning
+      # env vars are used to pass login creds and set the scan name
+      - run:
+          name: "Upload to Veracode"
+          command: java -jar pipeline-scan.jar
+            --veracode_api_id $VERACODE_API_KEY_ID
+            --veracode_api_key $VERACODE_API_KEY_SECRET
+            --file upload.zip
+            --fail_on_severity "Very High, High"
+            --fail_on_cwe "80"
+            --gl_vulnerability_generation="true"
+            --issue_details "true"
+            --summary_output "true"
+          #   --baseline_file "veracode-baseline.json"
+
+
+  # job to upload to Veracode for scanning
+  srcclr_scan:
+    docker:
+      # specify the version you desire here
+      - image: circleci/node:7.10
+
+    working_directory: ~/repo
+
+    steps:
+      # get the files from the previous job
+      - attach_workspace:
+          at: .
+
+      # download and run SourceClear scanner
+      - run:
+          name: "SourceClear scan"
+          command: |
+            cd nodegoat
+            curl -sSL https://download.sourceclear.com/ci.sh | bash
+
+# serial jobs - need to run 'build' before 'scan'
+workflows:
+  version: 2
+  build_and_scan:
+    jobs:
+      - build
+      - veracode_scan:
+          context:
+            - DemoContext
+          requires:
+            - build
+      - srcclr_scan:
+          context:
+            - DemoContext
+          requires:
+            - build
+
